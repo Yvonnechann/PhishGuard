@@ -1,0 +1,20 @@
+# Data files — too large for GitHub
+data-collection/data/
+feature-engineering/data/
+*.csv
+*.pkl
+*.json
+
+# Keep schema JSON files (small, needed for backend)
+!**/wallet_feature_schema.json
+!**/contract_feature_schema.json
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
