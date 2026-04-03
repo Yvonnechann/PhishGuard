@@ -1,0 +1,16 @@
+.text-type {
+  display: inline;
+}
+
+.text-type__content {
+  display: inline;
+}
+
+.text-type__cursor {
+  display: inline;
+  margin-left: 1px;
+}
+
+.text-type__cursor--hidden {
+  visibility: hidden;
+}

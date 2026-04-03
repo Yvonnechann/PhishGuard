@@ -29,3 +29,7 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+
+# Frontend
+system/frontend/node_modules/
+system/frontend/dist/

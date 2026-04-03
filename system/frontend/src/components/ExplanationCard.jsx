@@ -70,22 +70,23 @@ export default function ExplanationCard({ item, index }) {
 
   return (
     <div
-      className="rounded-2xl p-5 relative cursor-default group"
+      className="rounded-2xl p-5 relative cursor-default group flex flex-col"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.09)',
+        border: '1px solid rgba(255,255,255,0.28)',
         backdropFilter: 'blur(20px)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
         opacity: 0,
         animation: `fadeUp 0.5s ease-out ${0.1 + index * 0.1}s forwards`,
         transition: 'border-color 200ms, transform 200ms, box-shadow 200ms',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.30)'
         e.currentTarget.style.transform = 'translateY(-2px)'
         e.currentTarget.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4)`
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)'
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = 'none'
       }}
@@ -96,7 +97,7 @@ export default function ExplanationCard({ item, index }) {
           {increases ? '↑' : '↓'}
         </span>
         <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: accentColor }}>
-          {increases ? 'Increases risk' : 'Decreases risk'}
+          {increases ? 'Raises risk score' : 'Lowers risk score'}
         </span>
       </div>
 
@@ -121,7 +122,7 @@ export default function ExplanationCard({ item, index }) {
       )}
 
       {/* Magnitude bar */}
-      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div className="mt-auto h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
           ref={barRef}
           className="h-full rounded-full transition-all duration-700 ease-out"
@@ -129,9 +130,9 @@ export default function ExplanationCard({ item, index }) {
         />
       </div>
 
-      {/* SHAP value */}
-      <div className="text-[rgba(255,255,255,0.35)] text-xs mt-2 font-mono text-right">
-        SHAP {item.shap_value > 0 ? '+' : ''}{item.shap_value}
+      {/* Impact */}
+      <div className="text-[rgba(255,255,255,0.35)] text-xs mt-2 text-right">
+        Impact: {Math.abs(item.shap_value) > 2 ? 'Very High' : Math.abs(item.shap_value) > 1 ? 'High' : Math.abs(item.shap_value) > 0.5 ? 'Medium' : 'Low'}
       </div>
     </div>
   )

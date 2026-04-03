@@ -11,8 +11,8 @@ export default {
         'bg-dark': '#0a0a0f',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
+        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       keyframes: {
         fadeUp: {

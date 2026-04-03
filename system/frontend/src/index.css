@@ -45,13 +45,24 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+html {
   margin: 0;
   padding: 0;
-  background: #0a0a0f;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: #060608;
+  font-size: 17px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: 'Space Grotesk', system-ui, sans-serif !important;
   color: white;
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  background: transparent;
 }
 
 /* Scrollbar */

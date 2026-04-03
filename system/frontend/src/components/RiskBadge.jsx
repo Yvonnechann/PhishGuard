@@ -8,9 +8,9 @@ const RISK_CONFIG = {
 }
 
 const SUMMARIES = {
-  HIGH:   '⚠️ This address shows strong signs of phishing activity. Avoid interacting with it.',
-  MEDIUM: '⚠️ This address has suspicious characteristics. Proceed with caution.',
-  LOW:    '✅ This address appears legitimate based on on-chain behaviour.',
+  HIGH:   '⚠️ Strong indicators of phishing activity detected. Avoid sending funds to this address or approving any token requests from it.',
+  MEDIUM: '⚠️ This address has suspicious on-chain characteristics. Exercise caution before interacting.',
+  LOW:    '✅ No significant risk indicators found. This address appears safe based on its on-chain activity.',
 }
 
 export default function RiskBadge({ result }) {
@@ -37,7 +37,7 @@ export default function RiskBadge({ result }) {
       className="rounded-2xl p-8 transition-all duration-200"
       style={{
         background: `${cfg.bg}`,
-        border: `1px solid ${cfg.color}33`,
+        border: `1px solid ${cfg.color}66`,
         backdropFilter: 'blur(20px)',
         boxShadow: `0 0 40px ${cfg.glow}`,
         opacity: 0,
@@ -70,7 +70,7 @@ export default function RiskBadge({ result }) {
               {cfg.label}
             </div>
             <div className="text-[rgba(255,255,255,0.5)] text-sm mb-3">
-              Phishing probability score
+              Phishing risk probability
             </div>
             <AnalysisTypeTag type={result.analysis_type} />
           </div>
@@ -79,7 +79,7 @@ export default function RiskBadge({ result }) {
         {/* Right: summary */}
         <div
           className="md:max-w-xs text-[rgba(255,255,255,0.7)] text-sm leading-relaxed rounded-xl p-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)' }}
         >
           {SUMMARIES[result.risk_label]}
         </div>

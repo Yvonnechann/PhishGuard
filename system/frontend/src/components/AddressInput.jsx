@@ -1,15 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import LoadingSpinner from './LoadingSpinner'
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/
 
-export default function AddressInput({ onAnalyze, loading }) {
+export default function AddressInput({ onAnalyze, loading, resetRef }) {
   const [value, setValue] = useState('')
   const [inlineError, setInlineError] = useState('')
   const [shaking, setShaking] = useState(false)
   const [focused, setFocused] = useState(false)
   const [pressing, setPressing] = useState(false)
+  const [pasted, setPasted] = useState(false)
   const inputRef = useRef(null)
+
+  // Expose reset function to parent via resetRef
+  useEffect(() => {
+    if (resetRef) {
+      resetRef.current = () => {
+        setValue('')
+        setInlineError('')
+        setTimeout(() => inputRef.current?.focus(), 100)
+      }
+    }
+  }, [resetRef])
 
   function triggerShake() {
     setShaking(true)
@@ -20,7 +32,7 @@ export default function AddressInput({ onAnalyze, loading }) {
     e.preventDefault()
     const trimmed = value.trim()
     if (!ADDRESS_RE.test(trimmed)) {
-      setInlineError('Please enter a valid Ethereum address (0x + 40 hex characters)')
+      setInlineError('Enter a valid Ethereum address (0x followed by 40 hex characters)')
       triggerShake()
       return
     }
@@ -31,6 +43,19 @@ export default function AddressInput({ onAnalyze, loading }) {
   function handleChange(e) {
     setValue(e.target.value)
     if (inlineError) setInlineError('')
+  }
+
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText()
+      setValue(text.trim())
+      setInlineError('')
+      setPasted(true)
+      setTimeout(() => setPasted(false), 1500)
+      inputRef.current?.focus()
+    } catch {
+      // clipboard permission denied — fall through silently
+    }
   }
 
   const borderColor = inlineError
@@ -49,9 +74,7 @@ export default function AddressInput({ onAnalyze, loading }) {
     <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
       <div
         className="flex gap-3 items-stretch"
-        style={{
-          animation: shaking ? 'shake 0.4s ease-in-out' : 'none',
-        }}
+        style={{ animation: shaking ? 'shake 0.4s ease-in-out' : 'none' }}
       >
         <div className="flex-1 relative">
           <input
@@ -63,7 +86,7 @@ export default function AddressInput({ onAnalyze, loading }) {
             onBlur={() => setFocused(false)}
             placeholder="0x..."
             disabled={loading}
-            className="w-full h-14 px-5 rounded-2xl bg-white/5 text-white placeholder-white/25 font-mono text-sm outline-none transition-all duration-300 disabled:opacity-50"
+            className="w-full h-14 pl-5 pr-16 rounded-2xl bg-white/5 text-white placeholder-white/25 font-mono text-sm outline-none disabled:opacity-50"
             style={{
               border: `1px solid ${borderColor}`,
               boxShadow: `0 0 0 4px ${glowColor}`,
@@ -74,6 +97,23 @@ export default function AddressInput({ onAnalyze, loading }) {
             autoComplete="off"
             spellCheck={false}
           />
+          {/* Paste button inside input */}
+          <button
+            type="button"
+            onClick={handlePaste}
+            disabled={loading}
+            title="Paste from clipboard"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-lg transition-all duration-150 disabled:opacity-30"
+            style={{
+              color: pasted ? '#00ff88' : 'rgba(255,255,255,0.35)',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.background = 'rgba(0,255,136,0.08)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = pasted ? '#00ff88' : 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+          >
+            {pasted ? '✓' : '⎘'}
+          </button>
         </div>
 
         <button
@@ -81,16 +121,13 @@ export default function AddressInput({ onAnalyze, loading }) {
           disabled={loading}
           onMouseDown={() => setPressing(true)}
           onMouseUp={() => setPressing(false)}
-          onMouseLeave={() => setPressing(false)}
           className="h-14 px-8 rounded-2xl font-semibold text-sm text-black whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
           style={{
             background: loading
               ? 'rgba(0,255,136,0.5)'
               : 'linear-gradient(135deg, #00ff88, #00ccff)',
             transform: pressing ? 'scale(0.97)' : 'scale(1)',
-            boxShadow: loading
-              ? 'none'
-              : '0 0 20px rgba(0,255,136,0.35)',
+            boxShadow: loading ? 'none' : '0 0 20px rgba(0,255,136,0.35)',
             transition: 'transform 150ms, box-shadow 200ms, background 200ms',
           }}
           onMouseEnter={e => {
@@ -100,6 +137,7 @@ export default function AddressInput({ onAnalyze, loading }) {
             }
           }}
           onMouseLeave={e => {
+            setPressing(false)
             e.currentTarget.style.boxShadow = '0 0 20px rgba(0,255,136,0.35)'
             e.currentTarget.style.transform = 'scale(1)'
           }}
@@ -107,7 +145,7 @@ export default function AddressInput({ onAnalyze, loading }) {
           {loading ? (
             <>
               <LoadingSpinner size={16} color="#000" />
-              <span>Analyzing…</span>
+              <span>Analysing…</span>
             </>
           ) : (
             'Analyze'
@@ -115,7 +153,6 @@ export default function AddressInput({ onAnalyze, loading }) {
         </button>
       </div>
 
-      {/* Inline error */}
       {inlineError && (
         <p
           className="text-[#ff4444] text-sm mt-2 text-left pl-1"
