@@ -11,6 +11,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from config import SCORE_HIGH
+
 BASE_DIR = Path(__file__).parent
 
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +46,16 @@ async def lifespan(app: FastAPI):
     with open(BASE_DIR / "models" / "contract_threshold.json") as f:
         app.state.contract_threshold = float(json.load(f)["threshold"])
     logger.info(f"Contract threshold loaded: {app.state.contract_threshold}.")
+
+    # Step 7 — wallet threshold
+    wallet_threshold_path = BASE_DIR / "models" / "wallet_threshold.json"
+    if wallet_threshold_path.exists():
+        with open(wallet_threshold_path) as f:
+            app.state.wallet_threshold = float(json.load(f)["threshold"])
+        logger.info(f"Wallet threshold loaded: {app.state.wallet_threshold}.")
+    else:
+        app.state.wallet_threshold = SCORE_HIGH
+        logger.info(f"Wallet threshold file not found — using default {SCORE_HIGH}.")
 
     # Step 8 — wallet SHAP explainer
     app.state.wallet_explainer = shap.TreeExplainer(app.state.wallet_model)

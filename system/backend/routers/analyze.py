@@ -53,8 +53,13 @@ async def analyze(body: AddressRequest, request: Request):
     # Step 6 — threat intelligence (live API calls)
     intel = check_threat_intel(address)
 
-    # Step 7 — fusion
-    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"])
+    # Step 7 — fusion (use PR-curve tuned threshold for both models)
+    if analysis_type == "contract":
+        high_threshold = request.app.state.contract_threshold
+    else:
+        high_threshold = request.app.state.wallet_threshold
+    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"],
+                         high_threshold=high_threshold)
 
     return {
         "address": address,

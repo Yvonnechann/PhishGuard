@@ -6,4 +6,4 @@ ETHERSCAN_BASE   = 'https://api.etherscan.io/v2/api'
 ETHERSCAN_CHAIN_ID = 1
 TX_LIMIT         = 500
 APPROVAL_TOPIC   = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925'
-WALLET_THRESHOLD = 0.5
+WALLET_THRESHOLD = 0.75  # default fallback if wallet_threshold.json not found

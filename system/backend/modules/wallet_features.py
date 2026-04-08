@@ -1,4 +1,5 @@
 import logging
+import math
 import time
 from collections import defaultdict
 from statistics import median, stdev
@@ -47,13 +48,25 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
     tx_count_in = sum(1 for tx in txs if tx.get("to", "").lower() == addr)
     tx_count_out = sum(1 for tx in txs if tx.get("from", "").lower() == addr)
     tx_count_total = tx_count_in + tx_count_out
+    # Flag for display only — not fed to the model.
+    # Use the pre-filter raw count from the collector so errored txs don't hide the cap.
+    tx_count_capped = bool(raw_data.get("txs_hit_limit", False))
 
     # ── Wallet age ────────────────────────────────────────────────────────────
-    if txs:
+    # Prefer the dedicated first-tx timestamp (accurate even for active wallets
+    # where the main txlist is capped and sorted desc).
+    # log1p transform applied to match training data and prevent feature dominance.
+    first_tx_ts = raw_data.get("first_tx_timestamp")
+    if first_tx_ts:
+        raw_age_days = (now - int(first_tx_ts)) / 86400.0
+    elif txs:
         min_ts = min(int(tx.get("timeStamp", now)) for tx in txs)
-        wallet_age_days = (now - min_ts) / 86400.0
+        raw_age_days = (now - min_ts) / 86400.0
     else:
-        wallet_age_days = 0.0
+        raw_age_days = 0.0
+    wallet_age_days = raw_age_days
+    # Display-only — actual age in days, not fed to model
+    wallet_age_days_display = round(raw_age_days)
 
     # ── Counterparties ────────────────────────────────────────────────────────
     all_addrs = set()
@@ -80,12 +93,21 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         std_inter_tx_minutes = 0.0
 
     # ── Outbound value stats ──────────────────────────────────────────────────
-    out_values = [int(tx.get("value", 0)) / 1e18 for tx in txs if tx.get("from", "").lower() == addr]
+    out_values = [
+        int(tx.get("value", 0)) / 1e18 for tx in txs
+        if tx.get("from", "").lower() == addr
+        and tx.get("isError") == "0"
+        and int(tx.get("value", 0)) > 0
+    ]
     avg_out_value_eth = float(sum(out_values) / len(out_values)) if out_values else 0.0
     std_out_value_eth = float(stdev(out_values)) if len(out_values) >= 2 else 0.0
 
     # ── Inbound min value ─────────────────────────────────────────────────────
-    in_values = [int(tx.get("value", 0)) / 1e18 for tx in txs if tx.get("to", "").lower() == addr]
+    in_values = [
+        int(tx.get("value", 0)) / 1e18 for tx in txs
+        if tx.get("to", "").lower() == addr
+        and tx.get("isError") == "0"
+    ]
     min_in_value_eth = float(min(in_values)) if in_values else 0.0
 
     # ── Balance ───────────────────────────────────────────────────────────────
@@ -174,9 +196,11 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
 
     return {
         "wallet_age_days": float(wallet_age_days),
+        "wallet_age_days_display": int(wallet_age_days_display),
         "tx_count_in": int(tx_count_in),
         "tx_count_out": int(tx_count_out),
         "tx_count_total": int(tx_count_total),
+        "tx_count_capped": bool(tx_count_capped),
         "unique_counterparties_lifetime": int(unique_counterparties_lifetime),
         "fan_in_ratio": float(fan_in_ratio),
         "median_inter_tx_minutes": float(median_inter_tx_minutes),

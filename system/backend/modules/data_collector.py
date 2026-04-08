@@ -40,7 +40,7 @@ def _safe_txlist(raw: dict) -> list:
 def collect_wallet_data(address: str) -> dict:
     addr = address.lower()
 
-    # Transactions
+    # Transactions (most recent first — for feature extraction)
     txs_raw = _etherscan_get({
         "module": "account",
         "action": "txlist",
@@ -51,7 +51,25 @@ def collect_wallet_data(address: str) -> dict:
         "sort": "desc",
         "page": 1,
     })
+    # Check cap BEFORE filtering errors — if Etherscan returned TX_LIMIT rows
+    # the wallet has more transactions than we fetched.
+    raw_result = txs_raw.get("result", [])
+    txs_hit_limit = isinstance(raw_result, list) and len(raw_result) >= TX_LIMIT
     txs = _safe_txlist(txs_raw)
+
+    # First-ever transaction — separate cheap call for accurate wallet age
+    first_tx_raw = _etherscan_get({
+        "module": "account",
+        "action": "txlist",
+        "address": addr,
+        "startblock": 0,
+        "endblock": 99999999,
+        "offset": 1,
+        "sort": "asc",
+        "page": 1,
+    })
+    first_txs = _safe_txlist(first_tx_raw)
+    first_tx_timestamp = int(first_txs[0].get("timeStamp", 0)) if first_txs else None
 
     # Token transfers
     tokentxs_raw = _etherscan_get({
@@ -122,6 +140,8 @@ def collect_wallet_data(address: str) -> dict:
         "tokentxs": tokentxs,
         "balance_wei": balance_wei,
         "approval_logs": approval_logs,
+        "first_tx_timestamp": first_tx_timestamp,
+        "txs_hit_limit": txs_hit_limit,
     }
 
 
@@ -169,22 +189,8 @@ def collect_contract_data(address: str) -> dict:
         source_code = src_result[0].get("SourceCode", "")
         is_verified = 1 if isinstance(source_code, str) and source_code.strip() else 0
 
-    # Transactions
-    txs_raw = _etherscan_get({
-        "module": "account",
-        "action": "txlist",
-        "address": addr,
-        "startblock": 0,
-        "endblock": 99999999,
-        "offset": TX_LIMIT,
-        "sort": "desc",
-        "page": 1,
-    })
-    txs = _safe_txlist(txs_raw)
-
     return {
         "bytecode_hex": bytecode_hex,
         "abi_list": abi_list,
         "is_verified": is_verified,
-        "txs": txs,
     }

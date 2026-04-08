@@ -41,7 +41,8 @@ async def analyze_contract(body: AddressRequest, request: Request):
     shap_explanation = explain(feature_array, explainer_obj, feature_names)
 
     intel = check_threat_intel(address)
-    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"])
+    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"],
+                         high_threshold=request.app.state.contract_threshold)
 
     return {
         "address": address,

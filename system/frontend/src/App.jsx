@@ -11,6 +11,32 @@ import { LoadingSkeleton } from './components/LoadingSpinner'
 import ErrorAlert from './components/ErrorAlert'
 import { analyzeAddress } from './api/phishguard'
 
+function CopyButton({ text }) {
+  const [copied, setCopied] = React.useState(false)
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy address"
+      className="shrink-0 text-xs px-2 py-0.5 rounded-md transition-all"
+      style={{
+        background: copied ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.07)',
+        border: `1px solid ${copied ? 'rgba(0,255,136,0.4)' : 'rgba(255,255,255,0.15)'}`,
+        color: copied ? '#00ff88' : 'rgba(255,255,255,0.4)',
+        cursor: 'pointer',
+      }}
+    >
+      {copied ? '✓ Copied' : '⎘ Copy'}
+    </button>
+  )
+}
+
 export default function App() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -215,7 +241,7 @@ export default function App() {
                   ✓ Safe — Vitalik's Wallet
                 </button>
                 <button
-                  onClick={() => handleAnalyze('0x311f91395B4dA16a92fe38B8A7F4a78eB63ad5d0')}
+                  onClick={() => handleAnalyze('0x00008a7299aaCab28139C3b7D75Ae886572c0000')}
                   style={{
                     background: 'rgba(255,68,68,0.08)',
                     border: '1px solid rgba(255,68,68,0.25)',
@@ -248,16 +274,27 @@ export default function App() {
         {result && !loading && (
           <div className="space-y-8">
 
-            {/* Scanned address + scan another button */}
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2 min-w-0">
+            {/* Scanned address + copy + scan another */}
+            <div
+              className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
                 <span className="text-white/35 text-xs shrink-0">Scanned</span>
                 <span
-                  className="text-white/70 text-xs font-mono truncate"
-                  style={{ maxWidth: '260px' }}
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+                  style={{
+                    background: result.analysis_type === 'contract' ? 'rgba(0,204,255,0.12)' : 'rgba(0,255,136,0.12)',
+                    border: `1px solid ${result.analysis_type === 'contract' ? 'rgba(0,204,255,0.35)' : 'rgba(0,255,136,0.35)'}`,
+                    color: result.analysis_type === 'contract' ? '#00ccff' : '#00ff88',
+                  }}
                 >
+                  {result.analysis_type === 'contract' ? '📄 Contract' : '👛 Wallet'}
+                </span>
+                <span className="text-white/80 text-xs font-mono break-all">
                   {scannedAddress}
                 </span>
+                <CopyButton text={scannedAddress} />
               </div>
               <button
                 onClick={handleReset}
@@ -278,7 +315,19 @@ export default function App() {
             {/* Section 2: Risk result */}
             <RiskBadge result={result} />
 
-            {/* Section 3: How the score is computed — right after risk badge */}
+            {/* Section 3: Top factors behind this score */}
+            <div>
+              <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
+                <span style={{ color: '#00ff88' }}>◈</span> Top factors behind this score
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {result.shap_explanation.map((item, i) => (
+                  <ExplanationCard key={item.feature} item={item} index={i} features={result.raw_features} />
+                ))}
+              </div>
+            </div>
+
+            {/* Section 4: How the score is computed */}
             <div
               style={{
                 background: 'rgba(255,255,255,0.09)',
@@ -311,18 +360,6 @@ export default function App() {
                 <span style={{ color: '#ff8800', fontWeight: 600 }}>MEDIUM</span> 45–74% &nbsp;·&nbsp;
                 <span style={{ color: '#00ff88', fontWeight: 600 }}>LOW</span> &lt; 45% &nbsp;·&nbsp;
                 Final = ML + intel bonuses, capped at 100%.
-              </div>
-            </div>
-
-            {/* Section 4: Why this score */}
-            <div>
-              <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                <span style={{ color: '#00ff88' }}>◈</span> Top factors behind this score
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {result.shap_explanation.map((item, i) => (
-                  <ExplanationCard key={item.feature} item={item} index={i} />
-                ))}
               </div>
             </div>
 

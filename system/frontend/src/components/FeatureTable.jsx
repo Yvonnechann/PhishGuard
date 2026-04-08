@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 const WALLET_GROUPS = [
@@ -180,10 +180,10 @@ function formatValue(key, val) {
   return String(val)
 }
 
-function FeatureRow({ featureKey, val }) {
+function FeatureRow({ featureKey, val, capped = false }) {
   const info = FEATURE_INFO[featureKey] || { label: featureKey, hint: '' }
   const concerning = isConcerning(featureKey, val)
-  const formatted = formatValue(featureKey, val)
+  const formatted = capped ? '500+' : formatValue(featureKey, val)
   const [tipPos, setTipPos] = useState(null)
 
   return (
@@ -243,7 +243,7 @@ function FeatureRow({ featureKey, val }) {
 
 function FeatureGroup({ group, features, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen)
-  const entries = group.keys.filter(k => k in features)
+  const entries = group.keys.filter(k => k in features && k !== 'tx_count_capped')
 
   if (entries.length === 0) return null
 
@@ -268,7 +268,14 @@ function FeatureGroup({ group, features, defaultOpen = false }) {
       {open && (
         <div className="px-6 pb-4">
           {entries.map(k => (
-            <FeatureRow key={k} featureKey={k} val={features[k]} />
+            <FeatureRow
+              key={k}
+              featureKey={k}
+              val={k === 'wallet_age_days' && features.wallet_age_days_display !== undefined
+                ? features.wallet_age_days_display
+                : features[k]}
+              capped={k === 'tx_count_total' && !!features.tx_count_capped}
+            />
           ))}
         </div>
       )}

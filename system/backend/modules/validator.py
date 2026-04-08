@@ -26,10 +26,17 @@ def validate_and_detect_type(address: str) -> str:
         }, timeout=10)
         result = r.json().get("result", "0x")
 
-        if isinstance(result, str) and result.startswith("0x") and len(result) > 2:
-            # Secondary confirmation — only classify as contract if getsourcecode
-            # returns a non-empty ContractName AND a real ABI.
-            # This guards against EIP-7702 EOAs and other minimal-bytecode addresses.
+        # Bytecode length in bytes: subtract "0x" prefix and divide by 2
+        bytecode_bytes = (len(result) - 2) // 2 if isinstance(result, str) and result.startswith("0x") else 0
+
+        if bytecode_bytes > 100:
+            # Substantial bytecode → real contract (verified or not).
+            # EIP-7702 EOAs have only ~23 bytes, so this threshold safely excludes them.
+            return "contract"
+
+        if bytecode_bytes > 0:
+            # Short bytecode (1–100 bytes): could be EIP-7702 EOA.
+            # Use getsourcecode as a tiebreaker.
             try:
                 src_r = requests.get(ETHERSCAN_BASE, params={
                     "chainid": ETHERSCAN_CHAIN_ID,
