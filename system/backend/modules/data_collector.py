@@ -71,7 +71,7 @@ def collect_wallet_data(address: str) -> dict:
     first_txs = _safe_txlist(first_tx_raw)
     first_tx_timestamp = int(first_txs[0].get("timeStamp", 0)) if first_txs else None
 
-    # Token transfers
+    # Token transfers (most recent 200 — for feature extraction)
     tokentxs_raw = _etherscan_get({
         "module": "account",
         "action": "tokentx",
@@ -84,6 +84,21 @@ def collect_wallet_data(address: str) -> dict:
     if not isinstance(tokentxs_result, list):
         tokentxs_result = []
     tokentxs = tokentxs_result
+
+    # First-ever token transfer — fallback age source for token-only wallets
+    # that have no regular ETH transactions in txlist.
+    first_tokentx_raw = _etherscan_get({
+        "module": "account",
+        "action": "tokentx",
+        "address": addr,
+        "offset": 1,
+        "sort": "asc",
+        "page": 1,
+    })
+    first_tokentxs = first_tokentx_raw.get("result", [])
+    if not isinstance(first_tokentxs, list):
+        first_tokentxs = []
+    first_tokentx_timestamp = int(first_tokentxs[0].get("timeStamp", 0)) if first_tokentxs else None
 
     # Balance
     balance_raw = _etherscan_get({
@@ -141,6 +156,7 @@ def collect_wallet_data(address: str) -> dict:
         "balance_wei": balance_wei,
         "approval_logs": approval_logs,
         "first_tx_timestamp": first_tx_timestamp,
+        "first_tokentx_timestamp": first_tokentx_timestamp,
         "txs_hit_limit": txs_hit_limit,
     }
 

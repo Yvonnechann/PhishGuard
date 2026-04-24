@@ -35,7 +35,6 @@ const WALLET_GROUPS = [
     keys: [
       'fan_in_ratio',
       'pagerank_subgraph',
-      'clustering_coefficient',
       'reciprocity_ratio',
       'avg_shortest_path_to_known_scam',
     ],
@@ -286,6 +285,7 @@ function FeatureGroup({ group, features, defaultOpen = false }) {
 export default function FeatureTable({ features, analysisType }) {
   const [open, setOpen] = useState(false)
   const groups = analysisType === 'wallet' ? WALLET_GROUPS : CONTRACT_GROUPS
+  const signalCount = groups.flatMap(g => g.keys).filter(k => k in features && k !== 'tx_count_capped').length
 
   return (
     <div
@@ -307,7 +307,7 @@ export default function FeatureTable({ features, analysisType }) {
             Raw Signal Data
           </span>
           <span className="text-white/35 text-xs ml-2">
-            {Object.keys(features).length} signals
+            {signalCount} signals
           </span>
         </div>
         <span

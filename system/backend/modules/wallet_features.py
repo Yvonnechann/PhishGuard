@@ -1,5 +1,4 @@
 import logging
-import math
 import time
 from collections import defaultdict
 from statistics import median, stdev
@@ -56,7 +55,7 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
     # Prefer the dedicated first-tx timestamp (accurate even for active wallets
     # where the main txlist is capped and sorted desc).
     # log1p transform applied to match training data and prevent feature dominance.
-    first_tx_ts = raw_data.get("first_tx_timestamp")
+    first_tx_ts = raw_data.get("first_tx_timestamp") or raw_data.get("first_tokentx_timestamp")
     if first_tx_ts:
         raw_age_days = (now - int(first_tx_ts)) / 86400.0
     elif txs:
@@ -64,7 +63,6 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         raw_age_days = (now - min_ts) / 86400.0
     else:
         raw_age_days = 0.0
-    wallet_age_days = raw_age_days
     # Display-only — actual age in days, not fed to model
     wallet_age_days_display = round(raw_age_days)
 
@@ -170,7 +168,6 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         G.add_edge(f, t, weight=w)
 
     pagerank_subgraph = float(nx.pagerank(G).get(addr, 0.0)) if G.number_of_nodes() > 1 else 0.0
-    clustering_coefficient = float(nx.clustering(G.to_undirected()).get(addr, 0.0))
 
     # ── Reciprocity ───────────────────────────────────────────────────────────
     if unique_counterparties_lifetime > 0:
@@ -195,7 +192,7 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         avg_shortest_path_to_known_scam = 99.0
 
     return {
-        "wallet_age_days": float(wallet_age_days),
+        "wallet_age_days": float(raw_age_days),
         "wallet_age_days_display": int(wallet_age_days_display),
         "tx_count_in": int(tx_count_in),
         "tx_count_out": int(tx_count_out),
@@ -217,7 +214,6 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         "token_transfer_count": int(token_transfer_count),
         "cross_token_approval_same_spender_ratio": float(cross_token_approval_same_spender_ratio),
         "pagerank_subgraph": float(pagerank_subgraph),
-        "clustering_coefficient": float(clustering_coefficient),
         "reciprocity_ratio": float(reciprocity_ratio),
         "avg_shortest_path_to_known_scam": float(avg_shortest_path_to_known_scam),
     }

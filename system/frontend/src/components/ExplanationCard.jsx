@@ -31,6 +31,7 @@ function getContext(key, val, increases, capped = false) {
       if (days < 90)  return `${days} days old — less than 3 months old, a strong risk signal.`
       if (days < 180) return `${days} days old — less than 6 months old, a moderate risk signal.`
       if (days < 365) return `${days} days old — under a year old; the model found this younger than most legitimate wallets in training data.`
+      if (days >= 730) return `${days} days old — wallet is established (2+ years). Age is neutralised in the model; other behavioural signals are driving this score.`
       return `${days} days old — younger than the majority of established wallets, contributing a small risk signal.`
     }
     return `${days} days old — established wallet age, consistent with legitimate activity.`
@@ -250,7 +251,8 @@ export default function ExplanationCard({ item, index, features = {} }) {
     ? (isCapped ? '500+' : formatValue(item.feature, rawVal))
     : null
   const context = getContext(item.feature, rawVal, increases, isCapped)
-  const impactLabel = Math.abs(item.shap_value) > 2 ? 'Very High' : Math.abs(item.shap_value) > 1 ? 'High' : Math.abs(item.shap_value) > 0.5 ? 'Medium' : 'Low'
+  const isEstablishedWallet = item.feature === 'wallet_age_days' && Math.round(rawVal) >= 730 && increases
+  const impactLabel = isEstablishedWallet ? 'Low' : Math.abs(item.shap_value) > 2 ? 'Very High' : Math.abs(item.shap_value) > 1 ? 'High' : Math.abs(item.shap_value) > 0.5 ? 'Medium' : 'Low'
   const barPct = Math.min(Math.abs(item.shap_value) / 3.5 * 100, 100).toFixed(1)
 
   useEffect(() => {
