@@ -1,6 +1,8 @@
 import numpy as np
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from modules.data_collector import collect_contract_data, collect_wallet_data
 from modules.contract_features import compute_contract_features
@@ -12,6 +14,7 @@ from modules.fusion import fuse
 from modules.validator import validate_and_detect_type
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class AddressRequest(BaseModel):
@@ -19,7 +22,8 @@ class AddressRequest(BaseModel):
 
 
 @router.post("/analyze")
-async def analyze(body: AddressRequest, request: Request):
+@limiter.limit("10/minute")
+async def analyze(request: Request, body: AddressRequest):
     address = body.address
 
     # Step 1 — validate format + auto-detect type via RPC

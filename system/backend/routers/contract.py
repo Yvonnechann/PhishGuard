@@ -3,6 +3,8 @@ import re
 import numpy as np
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from modules.data_collector import collect_contract_data
 from modules.contract_features import compute_contract_features
@@ -12,6 +14,7 @@ from modules.threat_intel import check_threat_intel
 from modules.fusion import fuse
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 _ADDRESS_RE = re.compile(r'^0x[0-9a-fA-F]{40}$')
 
@@ -21,7 +24,8 @@ class AddressRequest(BaseModel):
 
 
 @router.post("/analyze/contract")
-async def analyze_contract(body: AddressRequest, request: Request):
+@limiter.limit("10/minute")
+async def analyze_contract(request: Request, body: AddressRequest):
     address = body.address
 
     # Validate format only — force contract, no RPC type detection
