@@ -33,3 +33,5 @@ __pycache__/
 # Frontend
 system/frontend/node_modules/
 system/frontend/dist/
+!system/frontend/package.json
+!system/frontend/package-lock.json
