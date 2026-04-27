@@ -4,31 +4,11 @@ from collections import defaultdict
 from statistics import median, stdev
 
 import networkx as nx
-import requests
 
 logger = logging.getLogger("phishguard.wallet_features")
 
-_CRYPTOSCAMDB_ADDRESSES_URL = "https://api.cryptoscamdb.org/v1/addresses"
 
-
-def _fetch_live_scam_set() -> set:
-    try:
-        resp = requests.get(_CRYPTOSCAMDB_ADDRESSES_URL, timeout=5)
-        resp.raise_for_status()
-        body = resp.json()
-        result = body.get("result", {})
-        # result may be a dict keyed by address, or a list of addresses
-        if isinstance(result, dict):
-            return set(addr.lower() for addr in result.keys())
-        if isinstance(result, list):
-            return set(addr.lower() for addr in result if isinstance(addr, str))
-        return set()
-    except Exception as exc:
-        logger.warning(f"CryptoScamDB addresses fetch failed: {exc}")
-        return set()
-
-
-def compute_wallet_features(raw_data: dict, address: str) -> dict:
+def compute_wallet_features(raw_data: dict, address: str, scam_set: set = None) -> dict:
     addr = address.lower()
     txs = raw_data.get("txs", []) or []
 
@@ -54,7 +34,6 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
     # ── Wallet age ────────────────────────────────────────────────────────────
     # Prefer the dedicated first-tx timestamp (accurate even for active wallets
     # where the main txlist is capped and sorted desc).
-    # log1p transform applied to match training data and prevent feature dominance.
     first_tx_ts = raw_data.get("first_tx_timestamp") or raw_data.get("first_tokentx_timestamp")
     if first_tx_ts:
         raw_age_days = (now - int(first_tx_ts)) / 86400.0
@@ -180,7 +159,7 @@ def compute_wallet_features(raw_data: dict, address: str) -> dict:
         reciprocity_ratio = 0.0
 
     # ── Avg shortest path to known scam ───────────────────────────────────────
-    scam_set = _fetch_live_scam_set()
+    scam_set = scam_set or set()
     try:
         if G.number_of_nodes() > 1 and addr in G and scam_set:
             lengths = nx.shortest_path_length(G, source=addr)

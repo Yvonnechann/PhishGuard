@@ -161,23 +161,23 @@ def collect_wallet_data(address: str) -> dict:
     }
 
 
-def collect_contract_data(address: str) -> dict:
+def collect_contract_data(address: str, bytecode_hex: str = None) -> dict:
     addr = address.lower()
 
-    # Bytecode via Etherscan V2 proxy (no RPC needed)
-    bytecode_hex = "0x"
-    try:
-        code_raw = _etherscan_get({
-            "module": "proxy",
-            "action": "eth_getCode",
-            "address": addr,
-            "tag": "latest",
-        })
-        result = code_raw.get("result", "0x")
-        if isinstance(result, str) and result.startswith("0x"):
-            bytecode_hex = result
-    except Exception as exc:
-        logger.warning(f"Etherscan eth_getCode failed: {exc}")
+    # Bytecode — reuse if already fetched by validator, otherwise fetch now
+    if not bytecode_hex:
+        try:
+            code_raw = _etherscan_get({
+                "module": "proxy",
+                "action": "eth_getCode",
+                "address": addr,
+                "tag": "latest",
+            })
+            result = code_raw.get("result", "0x")
+            bytecode_hex = result if isinstance(result, str) and result.startswith("0x") else "0x"
+        except Exception as exc:
+            logger.warning(f"Etherscan eth_getCode failed: {exc}")
+            bytecode_hex = "0x"
 
     # ABI
     abi_raw = _etherscan_get({
@@ -201,12 +201,19 @@ def collect_contract_data(address: str) -> dict:
     })
     src_result = src_raw.get("result", [])
     is_verified = 0
+    source_code = ""
+    compiler_version = ""
     if isinstance(src_result, list) and len(src_result) > 0:
-        source_code = src_result[0].get("SourceCode", "")
+        entry = src_result[0]
+        source_code = entry.get("SourceCode", "") or ""
+        compiler_version = entry.get("CompilerVersion", "") or ""
         is_verified = 1 if isinstance(source_code, str) and source_code.strip() else 0
 
     return {
+        "address": addr,
         "bytecode_hex": bytecode_hex,
         "abi_list": abi_list,
         "is_verified": is_verified,
+        "source_code": source_code,
+        "compiler_version": compiler_version,
     }

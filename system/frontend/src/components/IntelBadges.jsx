@@ -44,7 +44,7 @@ function Badge({ flagged, flaggedLabel, clearLabel, flaggedSub, clearSub, delay 
   )
 }
 
-export default function IntelBadges({ goplus, scamdb }) {
+export default function IntelBadges({ goplus, scamsniffer }) {
   return (
     <div className="flex flex-wrap gap-4">
       <Badge
@@ -56,11 +56,11 @@ export default function IntelBadges({ goplus, scamdb }) {
         delay={0.05}
       />
       <Badge
-        flagged={scamdb}
-        flaggedLabel="Found in Scam Database"
-        clearLabel="Not in Scam Database"
-        flaggedSub="This address appears in a community-maintained fraud registry. It has been publicly reported as a scam address."
-        clearSub="This address is not present in any known scam database. No community reports found."
+        flagged={scamsniffer}
+        flaggedLabel="Found in ScamSniffer Database"
+        clearLabel="Not in ScamSniffer Database"
+        flaggedSub="This address appears in ScamSniffer's phishing blacklist — a community-maintained registry trusted by Binance, OpenSea, and Chainalysis."
+        clearSub="This address is not in ScamSniffer's phishing database. No community phishing reports found."
         delay={0.15}
       />
     </div>

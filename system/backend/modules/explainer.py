@@ -5,7 +5,6 @@ import numpy as np
 logger = logging.getLogger("phishguard.explainer")
 
 FEATURE_DESCRIPTIONS = {
-    "wallet_age_days": "Wallet age in days",
     "tx_count_in": "Number of inbound transactions",
     "tx_count_out": "Number of outbound transactions",
     "tx_count_total": "Total transaction count lifetime",
@@ -25,7 +24,6 @@ FEATURE_DESCRIPTIONS = {
     "token_transfer_count": "Total ERC-20 token transfer events",
     "cross_token_approval_same_spender_ratio": "Cross-token approvals to same spender address",
     "pagerank_subgraph": "Network centrality score in transaction graph",
-    "clustering_coefficient": "How interconnected counterparties are",
     "reciprocity_ratio": "Proportion of two-way transaction relationships",
     "avg_shortest_path_to_known_scam": "Graph distance to nearest confirmed scam address",
     "is_verified": "Source code verified on Etherscan",

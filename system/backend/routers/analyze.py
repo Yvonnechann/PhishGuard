@@ -27,17 +27,17 @@ async def analyze(request: Request, body: AddressRequest):
     address = body.address
 
     # Step 1 — validate format + auto-detect type via RPC
-    analysis_type = validate_and_detect_type(address)
+    analysis_type, bytecode_hex = validate_and_detect_type(address)
 
-    # Step 2 — collect raw on-chain data
+    # Step 2 — collect raw on-chain data (pass bytecode so eth_getCode isn't called twice)
     if analysis_type == "wallet":
         raw_data = collect_wallet_data(address)
     else:
-        raw_data = collect_contract_data(address)
+        raw_data = collect_contract_data(address, bytecode_hex=bytecode_hex)
 
     # Step 3 — feature engineering
     if analysis_type == "wallet":
-        feature_dict = compute_wallet_features(raw_data, address)
+        feature_dict = compute_wallet_features(raw_data, address, scam_set=request.app.state.scam_set)
         model = request.app.state.wallet_model
         feature_names = request.app.state.wallet_feature_names
         explainer_obj = request.app.state.wallet_explainer
@@ -55,14 +55,14 @@ async def analyze(request: Request, body: AddressRequest):
     shap_explanation = explain(feature_array, explainer_obj, feature_names)
 
     # Step 6 — threat intelligence (live API calls)
-    intel = check_threat_intel(address)
+    intel = check_threat_intel(address, scam_set=request.app.state.scam_set)
 
     # Step 7 — fusion (use PR-curve tuned threshold for both models)
     if analysis_type == "contract":
         high_threshold = request.app.state.contract_threshold
     else:
         high_threshold = request.app.state.wallet_threshold
-    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"],
+    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamsniffer_flagged"],
                          high_threshold=high_threshold)
 
     return {
@@ -71,9 +71,8 @@ async def analyze(request: Request, body: AddressRequest):
         "ml_score": round(ml_score, 4),
         "final_score": fusion_result["final_score"],
         "risk_label": fusion_result["risk_label"],
-        "risk_color": fusion_result["risk_color"],
         "goplus_flagged": intel["goplus_flagged"],
-        "scamdb_match": intel["scamdb_match"],
+        "scamsniffer_flagged": intel["scamsniffer_flagged"],
         "shap_explanation": shap_explanation,
         "raw_features": feature_dict,
     }

@@ -103,7 +103,21 @@ async def lifespan(app: FastAPI):
         resp.raise_for_status()
         logger.info("Cloudflare RPC connection verified.")
     except Exception as exc:
-        logger.warning(f"Cloudflare RPC check failed: {exc}. Alchemy fallback will be used.")
+        logger.warning(f"Cloudflare RPC check failed: {exc}.")
+
+    # Step 12 — load ScamSniffer scam address blacklist at startup
+    _SCAMSNIFFER_URL = (
+        "https://raw.githubusercontent.com/scamsniffer/scam-database/main/blacklist/address.json"
+    )
+    try:
+        import requests as _requests
+        r = _requests.get(_SCAMSNIFFER_URL, timeout=10)
+        r.raise_for_status()
+        app.state.scam_set = set(addr.lower() for addr in r.json() if isinstance(addr, str))
+        logger.info(f"ScamSniffer blacklist loaded: {len(app.state.scam_set)} addresses.")
+    except Exception as exc:
+        app.state.scam_set = set()
+        logger.warning(f"ScamSniffer blacklist fetch failed: {exc}. Scam set will be empty.")
 
     logger.info("PhishGuard ready.")
     yield
@@ -116,14 +130,6 @@ app = FastAPI(title="PhishGuard", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-from routers import analyze, address, contract, explain, features  # noqa: E402
-app.include_router(analyze.router, prefix="/api")
-app.include_router(address.router, prefix="/api")
-app.include_router(contract.router, prefix="/api")
-app.include_router(explain.router, prefix="/api")
-app.include_router(features.router, prefix="/api")
-
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
@@ -131,6 +137,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from routers import analyze, address, contract, explain, features  # noqa: E402
+app.include_router(analyze.router, prefix="/api")
+app.include_router(address.router, prefix="/api")
+app.include_router(contract.router, prefix="/api")
+app.include_router(explain.router, prefix="/api")
+app.include_router(features.router, prefix="/api")
 
 
 # Global 500 handler
@@ -146,5 +159,5 @@ async def health(request: Request):
         "status": "ok",
         "wallet_model_loaded": hasattr(request.app.state, "wallet_model") and request.app.state.wallet_model is not None,
         "contract_model_loaded": hasattr(request.app.state, "contract_model") and request.app.state.contract_model is not None,
-        "intel_sources": ["goplus", "cryptoscamdb"],
+        "intel_sources": ["goplus", "scamsniffer"],
     }

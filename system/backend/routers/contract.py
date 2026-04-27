@@ -44,8 +44,8 @@ async def analyze_contract(request: Request, body: AddressRequest):
     feature_array = np.array([[feature_dict[k] for k in feature_names]], dtype=np.float32)
     shap_explanation = explain(feature_array, explainer_obj, feature_names)
 
-    intel = check_threat_intel(address)
-    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamdb_match"],
+    intel = check_threat_intel(address, scam_set=request.app.state.scam_set)
+    fusion_result = fuse(ml_score, intel["goplus_flagged"], intel["scamsniffer_flagged"],
                          high_threshold=request.app.state.contract_threshold)
 
     return {
@@ -54,9 +54,8 @@ async def analyze_contract(request: Request, body: AddressRequest):
         "ml_score": round(ml_score, 4),
         "final_score": fusion_result["final_score"],
         "risk_label": fusion_result["risk_label"],
-        "risk_color": fusion_result["risk_color"],
         "goplus_flagged": intel["goplus_flagged"],
-        "scamdb_match": intel["scamdb_match"],
+        "scamsniffer_flagged": intel["scamsniffer_flagged"],
         "shap_explanation": shap_explanation,
         "raw_features": feature_dict,
     }

@@ -241,7 +241,7 @@ export default function App() {
                   ✓ Safe — Vitalik's Wallet
                 </button>
                 <button
-                  onClick={() => handleAnalyze('0x00008a7299aaCab28139C3b7D75Ae886572c0000')}
+                  onClick={() => handleAnalyze('0x5b19a172b4ce95310d14f49c3575ed84f9b55b27')}
                   style={{
                     background: 'rgba(255,68,68,0.08)',
                     border: '1px solid rgba(255,68,68,0.25)',
@@ -347,7 +347,7 @@ export default function App() {
                 {[
                   { label: 'Machine Learning', color: '#00ff88', desc: 'XGBoost model scores 20+ on-chain signals — tx patterns, approvals, network graph.' },
                   { label: 'GoPlus Security',  color: '#00ccff', desc: 'Real-time threat feed. A flagged address adds +15 to the score.' },
-                  { label: 'Scam Database',    color: '#00ccff', desc: 'Checked against CryptoScamDB. A match adds +10 to the score.' },
+                  { label: 'ScamSniffer',       color: '#00ccff', desc: 'Checked against ScamSniffer\'s phishing blacklist (trusted by Binance, OpenSea). A match adds +10 to the score.' },
                 ].map(({ label, color, desc }) => (
                   <div key={label} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '14px' }}>
                     <div style={{ color, fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>{label}</div>
@@ -368,7 +368,7 @@ export default function App() {
               <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                 <span style={{ color: '#00ccff' }}>◈</span> Security Database Checks
               </h2>
-              <IntelBadges goplus={result.goplus_flagged} scamdb={result.scamdb_match} />
+              <IntelBadges goplus={result.goplus_flagged} scamsniffer={result.scamsniffer_flagged} />
             </div>
 
             {/* Section 6: Raw signal data */}

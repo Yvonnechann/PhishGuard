@@ -13,3 +13,5 @@ networkx==3.3
 joblib==1.4.0
 pyevmasm==0.2.3
 slowapi==0.1.9
+slither-analyzer
+py-solc-x

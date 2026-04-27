@@ -168,13 +168,10 @@ function getContext(key, val, increases, capped = false) {
     return `Only ${val} unique spender${val === 1 ? '' : 's'} approved — limited approval exposure.`
   }
   if (key === 'reciprocity_ratio') {
-    const pct = (val * 100).toFixed(0)
-    if (increases) return `${pct}% of counterparties are one-way — address sends to or receives from most parties without any reciprocal interaction, typical of scam flows.`
-    return `${pct}% reciprocal interactions — two-way activity with counterparties suggests genuine relationships.`
-  }
-  if (key === 'clustering_coefficient') {
-    if (increases) return `High clustering in transaction graph — address sits inside a tightly connected cluster, common in coordinated scam networks.`
-    return `Low clustering coefficient — address interacts with diverse, unconnected parties.`
+    const recipPct = (val * 100).toFixed(0)
+    const oneWayPct = (100 - val * 100).toFixed(0)
+    if (increases) return `${oneWayPct}% of counterparties are one-way — address sends to or receives from most parties without any reciprocal interaction, typical of scam flows.`
+    return `${recipPct}% reciprocal interactions — two-way activity with counterparties suggests genuine relationships.`
   }
   if (key === 'bytecode_size') {
     if (increases) return val === 0
@@ -242,7 +239,6 @@ export default function ExplanationCard({ item, index, features = {} }) {
   const accentColor = increases ? '#ff4444' : '#00ff88'
   const barRef = useRef(null)
 
-  // For wallet_age_days use the display value (real days) not the log-transformed model value
   const rawVal = item.feature === 'wallet_age_days' && features.wallet_age_days_display !== undefined
     ? features.wallet_age_days_display
     : features[item.feature]

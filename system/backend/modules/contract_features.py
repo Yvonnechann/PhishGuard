@@ -1,4 +1,14 @@
+import json
+import logging
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+
 from pyevmasm import disassemble_all
+
+logger = logging.getLogger("phishguard.contract_features")
 
 
 def disassemble_safe(bytecode_hex: str) -> list:
@@ -15,11 +25,182 @@ def disassemble_safe(bytecode_hex: str) -> list:
 
 _PROXY_SLOT = "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
 
+_SLITHER_DEFAULTS = {
+    "slither_warning_count_total": 0,
+    "slither_low_level_call_count": 0,
+    "slither_access_control_issues_count": 0,
+}
+
+
+def _prepare_slither_files(source_code_str: str, address: str):
+    source = source_code_str.strip()
+    temp_dir = tempfile.mkdtemp()
+    try:
+        if source.startswith("{{"):
+            parsed = json.loads(source[1:-1])
+            sources = parsed.get("sources", {})
+            entry = None
+            for filename, content in sources.items():
+                filepath = os.path.join(temp_dir, os.path.basename(filename))
+                with open(filepath, "w") as f:
+                    f.write(content.get("content", ""))
+                if entry is None:
+                    entry = filepath
+            return temp_dir, entry
+
+        if source.startswith("{") and '"language"' in source:
+            parsed = json.loads(source)
+            sources = parsed.get("sources", {})
+            entry = None
+            for filename, content in sources.items():
+                filepath = os.path.join(temp_dir, os.path.basename(filename))
+                with open(filepath, "w") as f:
+                    f.write(content.get("content", ""))
+                if entry is None:
+                    entry = filepath
+            return temp_dir, entry
+
+        entry = os.path.join(temp_dir, f"{address}.sol")
+        with open(entry, "w") as f:
+            f.write(source)
+        return temp_dir, entry
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return None, None
+
+
+def _resolve_solc_path(compiler_version_str: str) -> str:
+    try:
+        import solcx  # type: ignore[import-untyped]
+        from packaging.version import Version as V
+
+        ver_match = re.search(r"v?([\d]+\.[\d]+\.[\d]+)", compiler_version_str)
+        target_str = ver_match.group(1) if ver_match else "0.8.19"
+        home = os.path.expanduser("~")
+
+        def binary_path(v):
+            p = f"{home}/.solcx/solc-v{v}"
+            return p if os.path.exists(p) else None
+
+        if binary_path(target_str):
+            return binary_path(target_str)
+
+        try:
+            solcx.install_solc(target_str, show_progress=False)
+            if binary_path(target_str):
+                return binary_path(target_str)
+        except Exception:
+            pass
+
+        target = V(target_str)
+        installed = solcx.get_installed_solc_versions()
+        same_minor = [v for v in installed if v.major == target.major and v.minor == target.minor]
+        if same_minor:
+            best = str(max(same_minor))
+            if binary_path(best):
+                return binary_path(best)
+
+        return binary_path("0.8.19")
+    except Exception:
+        return None
+
+
+def _run_slither(entry_file: str, solc_path: str) -> dict:
+    if not solc_path:
+        return _SLITHER_DEFAULTS.copy()
+
+    runner_fd, runner = tempfile.mkstemp(suffix=".py")
+    os.close(runner_fd)
+    output_fd, output = tempfile.mkstemp(suffix=".json")
+    os.close(output_fd)
+    try:
+        script = f"""
+import json, os, inspect
+os.environ['PATH'] = os.path.dirname({repr(solc_path)}) + ':' + os.environ.get('PATH', '')
+try:
+    from slither.slither import Slither
+    from slither.detectors.abstract_detector import AbstractDetector
+    import slither.detectors.all_detectors as ad
+
+    detector_classes = [
+        cls for _, cls in inspect.getmembers(ad, inspect.isclass)
+        if issubclass(cls, AbstractDetector) and cls is not AbstractDetector
+    ]
+    sl = Slither({repr(entry_file)}, solc={repr(solc_path)})
+    for d in detector_classes:
+        sl.register_detector(d)
+    raw = sl.run_detectors()
+
+    all_findings = [f for det in raw for f in det]
+    total   = sum(len(f.get('elements', [])) for f in all_findings)
+    low_lvl = sum(len(f.get('elements', [])) for f in all_findings
+                  if 'low-level-calls' in f.get('check', ''))
+    access  = sum(len(f.get('elements', [])) for f in all_findings
+                  if 'access-control' in f.get('check', '')
+                  or 'unprotected'    in f.get('check', ''))
+
+    with open({repr(output)}, 'w') as fh:
+        json.dump({{'total': total, 'low_lvl': low_lvl, 'access': access}}, fh)
+except Exception as e:
+    with open({repr(output)}, 'w') as fh:
+        json.dump({{'total': 0, 'low_lvl': 0, 'access': 0, 'err': str(e)}}, fh)
+"""
+        with open(runner, "w") as f:
+            f.write(script)
+
+        subprocess.run(["python3", runner], timeout=30, capture_output=True)
+
+        if os.path.exists(output):
+            with open(output) as f:
+                data = json.load(f)
+            return {
+                "slither_warning_count_total":         data.get("total",   0),
+                "slither_low_level_call_count":        data.get("low_lvl", 0),
+                "slither_access_control_issues_count": data.get("access",  0),
+            }
+        return _SLITHER_DEFAULTS.copy()
+    except subprocess.TimeoutExpired:
+        logger.warning(f"Slither timed out on {entry_file}")
+        return _SLITHER_DEFAULTS.copy()
+    except Exception as exc:
+        logger.warning(f"Slither failed: {exc}")
+        return _SLITHER_DEFAULTS.copy()
+    finally:
+        for f in [runner, output]:
+            try:
+                os.unlink(f)
+            except Exception:
+                pass
+
+
+def _get_slither_features(source_code: str, compiler_version: str, address: str) -> dict:
+    if not source_code or not source_code.strip():
+        return _SLITHER_DEFAULTS.copy()
+    try:
+        solc_path = _resolve_solc_path(compiler_version)
+        if not solc_path:
+            logger.warning(f"No solc binary found for {compiler_version}, skipping Slither")
+            return _SLITHER_DEFAULTS.copy()
+
+        temp_dir, entry_file = _prepare_slither_files(source_code, address)
+        if entry_file is None:
+            return _SLITHER_DEFAULTS.copy()
+
+        result = _run_slither(entry_file, solc_path)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return result
+    except Exception as exc:
+        logger.warning(f"Slither pipeline failed for {address}: {exc}")
+        return _SLITHER_DEFAULTS.copy()
+
 
 def compute_contract_features(raw_data: dict) -> dict:
     bytecode_hex: str = raw_data.get("bytecode_hex", "0x") or "0x"
     abi_list: list = raw_data.get("abi_list", []) or []
     is_verified: int = int(raw_data.get("is_verified", 0))
+    source_code: str = raw_data.get("source_code", "") or ""
+    compiler_version: str = raw_data.get("compiler_version", "") or ""
+    address: str = raw_data.get("address", "unknown")
 
     # ── Bytecode size ─────────────────────────────────────────────────────────
     bytecode_size = (len(bytecode_hex) - 2) // 2 if bytecode_hex != "0x" else 0
@@ -127,7 +308,9 @@ def compute_contract_features(raw_data: dict) -> dict:
         "approval_then_external_call_pattern": int(approval_then_external_call_pattern),
         "approval_then_state_mutation_pattern": int(approval_then_state_mutation_pattern),
         "control_flow_complexity_score": float(control_flow_complexity_score),
-        "slither_warning_count_total": 0,
-        "slither_low_level_call_count": 0,
-        "slither_access_control_issues_count": 0,
+        **(
+            _get_slither_features(source_code, compiler_version, address)
+            if is_verified == 1
+            else _SLITHER_DEFAULTS.copy()
+        ),
     }
