@@ -16,11 +16,12 @@ _GOPLUS_FLAGS = {
 }
 
 
-def check_threat_intel(address: str, scam_set: set = None) -> dict:
+def check_threat_intel(address: str, scam_set=None) -> dict:
     addr = address.lower()
 
     # ── GoPlus ────────────────────────────────────────────────────────────────
     goplus_flagged = False
+    goplus_available = True
     try:
         resp = requests.get(_GOPLUS_URL.format(addr), timeout=5)
         resp.raise_for_status()
@@ -29,14 +30,19 @@ def check_threat_intel(address: str, scam_set: set = None) -> dict:
             goplus_flagged = any(result.get(flag) == "1" for flag in _GOPLUS_FLAGS)
     except Exception as exc:
         logger.warning(f"GoPlus call failed for {addr}: {exc}")
+        goplus_available = False
 
     # ── ScamSniffer (pre-loaded set at startup) ───────────────────────────────
-    scamsniffer_flagged = addr in (scam_set or set())
+    # scam_set is None when the startup fetch failed — treat as unavailable
+    scamsniffer_available = scam_set is not None
+    scamsniffer_flagged = addr in scam_set if scamsniffer_available else False
 
     scamdb_match = goplus_flagged or scamsniffer_flagged
 
     return {
         "goplus_flagged": goplus_flagged,
+        "goplus_available": goplus_available,
         "scamsniffer_flagged": scamsniffer_flagged,
+        "scamsniffer_available": scamsniffer_available,
         "scamdb_match": scamdb_match,
     }

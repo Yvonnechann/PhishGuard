@@ -368,7 +368,12 @@ export default function App() {
               <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                 <span style={{ color: '#00ccff' }}>◈</span> Security Database Checks
               </h2>
-              <IntelBadges goplus={result.goplus_flagged} scamsniffer={result.scamsniffer_flagged} />
+              <IntelBadges
+                goplus={result.goplus_flagged}
+                goplusAvailable={result.goplus_available ?? true}
+                scamsniffer={result.scamsniffer_flagged}
+                scamsnifferAvailable={result.scamsniffer_available ?? true}
+              />
             </div>
 
             {/* Section 6: Raw signal data */}

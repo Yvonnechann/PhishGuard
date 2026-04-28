@@ -12,13 +12,9 @@ logger = logging.getLogger("phishguard.data_collector")
 def _etherscan_get(params: dict) -> dict:
     params["chainid"] = ETHERSCAN_CHAIN_ID
     params["apikey"] = os.environ.get("ETHERSCAN_API_KEY", "")
-    try:
-        resp = requests.get(ETHERSCAN_BASE, params=params, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as exc:
-        logger.warning(f"Etherscan request failed: {exc}")
-        return {"status": "0", "result": []}
+    resp = requests.get(ETHERSCAN_BASE, params=params, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def _safe_txlist(raw: dict) -> list:

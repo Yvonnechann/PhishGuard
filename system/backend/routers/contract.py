@@ -55,7 +55,9 @@ async def analyze_contract(request: Request, body: AddressRequest):
         "final_score": fusion_result["final_score"],
         "risk_label": fusion_result["risk_label"],
         "goplus_flagged": intel["goplus_flagged"],
+        "goplus_available": intel["goplus_available"],
         "scamsniffer_flagged": intel["scamsniffer_flagged"],
+        "scamsniffer_available": intel["scamsniffer_available"],
         "shap_explanation": shap_explanation,
         "raw_features": feature_dict,
     }

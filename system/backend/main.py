@@ -116,8 +116,8 @@ async def lifespan(app: FastAPI):
         app.state.scam_set = set(addr.lower() for addr in r.json() if isinstance(addr, str))
         logger.info(f"ScamSniffer blacklist loaded: {len(app.state.scam_set)} addresses.")
     except Exception as exc:
-        app.state.scam_set = set()
-        logger.warning(f"ScamSniffer blacklist fetch failed: {exc}. Scam set will be empty.")
+        app.state.scam_set = None
+        logger.warning(f"ScamSniffer blacklist fetch failed: {exc}. ScamSniffer checks will show as unavailable.")
 
     logger.info("PhishGuard ready.")
     yield
