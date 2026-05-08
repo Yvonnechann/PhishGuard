@@ -25,7 +25,7 @@ FEATURE_DESCRIPTIONS = {
     "cross_token_approval_same_spender_ratio": "Cross-token approvals to same spender address",
     "pagerank_subgraph": "Network centrality score in transaction graph",
     "reciprocity_ratio": "Proportion of two-way transaction relationships",
-    "avg_shortest_path_to_known_scam": "Graph distance to nearest confirmed scam address",
+    "avg_shortest_path_to_known_scam": "Average graph distance to known scam addresses",
     "is_verified": "Source code verified on Etherscan",
     "bytecode_size": "Size of contract bytecode in bytes",
     "abi_function_count": "Number of functions in contract ABI",
