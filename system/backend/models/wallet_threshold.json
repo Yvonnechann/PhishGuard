@@ -1,0 +1,5 @@
+{
+  "threshold": 0.5486000776290894,
+  "best_f1": 0.9081885851079681,
+  "note": "Optimal threshold from PR curve. Use instead of default 0.75 for production predictions."
+}

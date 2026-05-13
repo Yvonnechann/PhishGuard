@@ -5,9 +5,13 @@ feature-engineering/data/
 *.pkl
 *.json
 
-# Keep schema JSON files (small, needed for backend)
+# Keep schema JSON files and trained model files
 !**/wallet_feature_schema.json
 !**/contract_feature_schema.json
+!system/backend/models/wallet_xgboost_v1.pkl
+!system/backend/models/contract_xgboost_v1.pkl
+!system/backend/models/wallet_threshold.json
+!system/backend/models/contract_threshold.json
 
 # Jupyter checkpoints
 .ipynb_checkpoints/

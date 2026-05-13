@@ -51,13 +51,13 @@ PhishGuard/
     │   ├── config.py
     │   ├── requirements.txt
     │   ├── .env.example
-    │   ├── models/                  # .pkl and threshold .json files (gitignored)
-    │   │   ├── wallet_feature_schema.json      ← tracked in git
-    │   │   ├── contract_feature_schema.json    ← tracked in git
-    │   │   ├── wallet_threshold.json           ← gitignored, from Drive
-    │   │   ├── contract_threshold.json         ← gitignored, from Drive
-    │   │   ├── wallet_xgboost_v1.pkl           ← gitignored, from Drive
-    │   │   └── contract_xgboost_v1.pkl         ← gitignored, from Drive
+    │   ├── models/                  # all files tracked in git
+    │   │   ├── wallet_feature_schema.json
+    │   │   ├── contract_feature_schema.json
+    │   │   ├── wallet_threshold.json
+    │   │   ├── contract_threshold.json
+    │   │   ├── wallet_xgboost_v1.pkl
+    │   │   └── contract_xgboost_v1.pkl
     │   ├── modules/
     │   │   ├── data_collector.py
     │   │   ├── wallet_features.py
