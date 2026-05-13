@@ -319,15 +319,17 @@ MyDrive/PhishGuard/
    GOPLUS_API_KEY=                              # optional
    ```
 
-4. Place the trained model files in `system/backend/models/`:
+4. All model files are tracked in git and will be present after cloning:
    ```
    models/
    ├── wallet_xgboost_v1.pkl
    ├── wallet_threshold.json
    ├── contract_xgboost_v1.pkl
-   └── contract_threshold.json
+   ├── contract_threshold.json
+   ├── wallet_feature_schema.json
+   └── contract_feature_schema.json
    ```
-   The two schema files (`wallet_feature_schema.json`, `contract_feature_schema.json`) are already tracked in git and do not need to be downloaded.
+   No separate download needed.
 
    > The backend verifies the SHA-256 hash of both `.pkl` files on every startup. If you retrain the models, update `_MODEL_HASHES` in `main.py` with the new digests.
 
